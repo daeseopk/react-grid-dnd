@@ -41,7 +41,8 @@ export function GridDropZone({
     measureAll,
     onChange,
     remove,
-    getActiveDropId
+    getActiveDropId,
+    getZone,
   } = React.useContext(GridContext);
 
   const ref = React.useRef<HTMLDivElement>(null);
@@ -59,7 +60,7 @@ export function GridDropZone({
   const grid: GridSettings = {
     columnWidth: bounds.width / boxesPerRow,
     boxesPerRow,
-    rowHeight
+    rowHeight,
   };
 
   const childCount = React.Children.count(children);
@@ -79,7 +80,7 @@ export function GridDropZone({
       count: childCount,
       grid,
       disableDrop,
-      remeasure
+      remeasure,
     });
   }, [childCount, disableDrop, bounds, id, grid]);
 
@@ -100,7 +101,7 @@ export function GridDropZone({
       ref={ref}
       style={{
         position: "relative",
-        ...style
+        ...style,
       }}
       {...other}
     >
@@ -114,14 +115,14 @@ export function GridDropZone({
 
             const order = placeholder
               ? swap(
-                  itemsIndexes,
+                  itemsIndexes || [],
                   placeholder.startIndex,
                   placeholder.targetIndex
                 )
               : itemsIndexes;
 
             const pos = getPositionForIndex(
-              order.indexOf(i),
+              order?.indexOf(i) || 0,
               grid,
               traverseIndex
             );
@@ -135,17 +136,22 @@ export function GridDropZone({
 
             function onMove(state: StateType, x: number, y: number) {
               if (!ref.current) return;
-
               if (draggingIndex !== i) {
                 setDraggingIndex(i);
               }
+              const activeZoneId = traverse?.targetId ? traverse.targetId : id;
+
+              const targetZone = getZone(activeZoneId);
+              if (!targetZone) {
+                return;
+              }
+              const targetGrid = targetZone?.grid;
 
               const targetDropId = getActiveDropId(
                 id,
-                x + grid.columnWidth / 2,
-                y + grid.rowHeight / 2
+                x + targetGrid?.columnWidth / 2,
+                y + targetGrid?.rowHeight / 2
               );
-
               if (targetDropId && targetDropId !== id) {
                 startTraverse(id, targetDropId, x, y, i);
               } else {
@@ -157,7 +163,7 @@ export function GridDropZone({
                   ? childCount
                   : getTargetIndex(
                       i,
-                      grid,
+                      targetGrid,
                       childCount,
                       state.delta[0],
                       state.delta[1]
@@ -170,7 +176,7 @@ export function GridDropZone({
                 ) {
                   setPlaceholder({
                     targetIndex,
-                    startIndex: i
+                    startIndex: i,
                   });
                 }
               } else if (placeholder) {
@@ -235,7 +241,7 @@ export function GridDropZone({
                   onEnd,
                   onStart,
                   grid,
-                  dragging: i === draggingIndex
+                  dragging: i === draggingIndex,
                 }}
               >
                 {child}
